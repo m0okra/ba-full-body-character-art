@@ -8,8 +8,9 @@
 | --- | --- | --- |
 | `out/CH0295_Idle_01_mesh_pc.png` | 1376×2934 | 推荐成品：`Idle_01` @ 1.2499665 s，原生像素 |
 | `out/CH0295_setup_mesh_pc.png` | 1376×2935 | setup pose（骨骼静止姿势） |
+| `out/CH0273_Idle_01_mesh_pc.png` | 1077×2799 | CH0273玛丽（偶像）：同一套流程，`Idle_01` @ 1.6 s（图集`scale:1.1`，画布1084×2811） |
 
-输出尺寸 = 画布1390×2959裁到内容bbox。
+输出尺寸 = 画布（CH0295 1390×2959 / CH0273 1084×2811）裁到内容bbox。
 
 CH0295成品预览：
 
@@ -22,8 +23,10 @@ build_mesh_pc.py                       三角面合成（核心）
 tools/spine_probe/dump_official.mjs    官方 spine-core 读 skel -> pose JSON
 tools/spine_probe/node_modules/        @esotericsoftware/spine-core 4.2.120（不入库，`npm i` 复原）
 tools/spine_probe/official_pc*.json    本例 pose（setup / Idle_01@1.2499665）
+tools/spine_probe/ch0273_spr_*.json    CH0273 的 pose（setup / Idle_01@1.6）
 tools/extract_portrait.py              从客户端 bundle 导出素材（跨平台，换角色时用）
 spine_src/ch0295_spr/                  本例素材：CH0295_spr.atlas / .skel / .png(2048²)
+spine_src/ch0273_spr/                  CH0273 素材：CH0273_spr.atlas / .skel / .png(2048²)
 out/  mesh_out/                        成品 / 诊断图
 .gitignore                             忽略 node_modules、临时提取目录、超分产物等
 ```
@@ -118,7 +121,11 @@ saved out/CH0295_Idle_01_mesh_pc.png (1376, 2934)
 5. **图集透明像素是黑的**。采样/缩放要走预乘alpha，否则边缘会被透明黑压灰；`build_mesh_pc.py`里已经这么做了。
 6. **`.atlas`的`offsets`只能用于同一画布内的相对定位**（上下半身之间的相对位置精确到像素），不能各自独立定位后再拼 —— 会出缝。
 7. **客户端目录只读**。有XIGNCODE，改文件会触发异常客户端。
-8. **slot颜色（`slotColor`的rgb与alpha）要乘进采样结果**。BA用它控制配件强度：同一角色挂多件光环 / 表情层时靠它的alpha淡出（常见到0.0x量级），不乘就会把本该只叠一层的加色件按满强度画上去。
+8. **slot颜色（`slotColor`的rgb与alpha）要乘进采样结果**。BA用它控制配件强度：同一角色挂多件光环 / 表情层时靠它的alpha淡出（常见到0.0x量级），不乘就会把本该只叠一层的加色件按满强度画上去。CH0273的`Halo_02`就是这种件（additive，slot alpha 0.075）：
+
+![CH0273 光环：忽略 slotColor（左，白成一片）vs 应用 slotColor（右，金色光环正常）](mesh_out/CH0273_slotcolor_compare.png)
+
+左图把`Halo_02`按满强度叠到了`Halo_01`的金色星形光环上，通道直接顶满；右图是乘上slot颜色后的同一帧。
 9. **本脚本的边界**：只支持单atlas page；不做蒙版 / 描边 / tint（slot颜色除外）。四种`blend`（normal/additive/multiply/screen）都按预乘形式实现，遇到未知值会在stdout打印警告并按normal处理。
 
 ## 实测数据（本例）
