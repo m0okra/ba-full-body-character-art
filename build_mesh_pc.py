@@ -213,8 +213,14 @@ def alpha_outside_hull(atlas, region, hull, hull_origin):
     """
     if region is None or hull is None:
         return 0, 0
+    # 旋转 90° 的 region 图框是按未裁剪尺寸算的，可以越过页面右/下边界；
+    # 不先夹到页面内，裁出来的 alpha 与 hull 遮罩宽度对不上
+    ph, pw = atlas.shape[:2]
     x, y = int(region['x']), int(region['y'])
-    x1, y1 = x + int(region['width']), y + int(region['height'])
+    x1 = min(pw, x + int(region['width']))
+    y1 = min(ph, y + int(region['height']))
+    if x1 <= x or y1 <= y:
+        return 0, 0
     sx, sy = x - hull_origin[0], y - hull_origin[1]
     m = hull[sy:sy + (y1 - y), sx:sx + (x1 - x)] == 0
     if m.shape != (y1 - y, x1 - x) or not m.size:
