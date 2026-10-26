@@ -16,9 +16,6 @@ out/extract_test*/
 out/_*
 mesh_out/_*
 
-# 可选超分产物：体积大，随时可用 README 里的 Real-ESRGAN 命令重跑
-out/*_4x*.png
-
 # 工具二进制（自备 AssetStudioModCLI / BAMT，约 130 MB）
 tools/bin/
 

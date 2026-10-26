@@ -28,7 +28,7 @@ tools/extract_portrait.py              从客户端 bundle 导出素材（跨平
 spine_src/ch0295_spr/                  本例素材：CH0295_spr.atlas / .skel / .png(2048²)
 spine_src/ch0273_spr/                  CH0273 素材：CH0273_spr.atlas / .skel / .png(2048²)
 out/  mesh_out/                        成品 / 诊断图
-.gitignore                             忽略 node_modules、临时提取目录、超分产物等
+.gitignore                             忽略 node_modules、临时提取目录、工具二进制等
 ```
 
 ## 依赖
