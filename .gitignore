@@ -1,0 +1,33 @@
+# Node：spine-core 依赖，体积大且可复原（cd tools/spine_probe && npm i）
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 提取时的临时拷贝：bundle 可到 GB 级，导出完成后脚本会自动删
+out/bundles/
+# 试跑/对比用的临时导出目录
+out/extract_test*/
+
+# 试跑产生的临时图（成品图、README 插图不受影响）
+out/_*
+mesh_out/_*
+
+# 可选超分产物：体积大，随时可用 README 里的 Real-ESRGAN 命令重跑
+out/*_4x*.png
+
+# 工具二进制（自备 AssetStudioModCLI / BAMT，约 130 MB）
+tools/bin/
+
+# 日志
+*.log
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
