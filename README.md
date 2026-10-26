@@ -101,7 +101,7 @@ saved out/CH0295_Idle_01_mesh_pc.png (1376, 2934)
 1. **画布**：`canvas_px = reference_resolution × page_scale`（本例`1068.974×2275.954 × 1.3` → 1390×2959）。
 2. **逐顶点**：`canvas = ((world_x - data.x) * K, (data.y + data.height - world_y) * K)`，`K = canvas_w / data.width`。
 3. **逐三角面**：3个角点在page px与canvas px各有一对坐标 → 三角内重心插值出每个像素的UV，一次性`cv2.remap`采样（不是逐三角贴图，所以共享边不会被混合两次）。
-4. **合成**：预乘alpha、按draw order做over，最后还原直通alpha；默认裁到bbox。
+4. **合成**：每个attachment采样后先乘上它的slot颜色（`slotColor`的rgb与alpha），再按draw order以预乘alpha叠（每个attachment用它自己的`blend`：normal走over、additive直接相加、multiply、screen），最后还原直通alpha；默认裁到bbox。
 
 `mesh_out/`会写两张诊断图：`*_preview.png`（垫棋盘格）、`*_page_overlay.png`（三角面画在图集页上）。
 
@@ -118,7 +118,8 @@ saved out/CH0295_Idle_01_mesh_pc.png (1376, 2934)
 5. **图集透明像素是黑的**。采样/缩放要走预乘alpha，否则边缘会被透明黑压灰；`build_mesh_pc.py`里已经这么做了。
 6. **`.atlas`的`offsets`只能用于同一画布内的相对定位**（上下半身之间的相对位置精确到像素），不能各自独立定位后再拼 —— 会出缝。
 7. **客户端目录只读**。有XIGNCODE，改文件会触发异常客户端。
-8. **本脚本的边界**：只支持单atlas page、只做over混合（`blend != normal`会打印警告，例如`chinatsu_spr`的`halo`是additive）、忽略slot颜色着色。做到哪一步都会在stdout里明说。
+8. **slot颜色（`slotColor`的rgb与alpha）要乘进采样结果**。BA用它控制配件强度：同一角色挂多件光环 / 表情层时靠它的alpha淡出（常见到0.0x量级），不乘就会把本该只叠一层的加色件按满强度画上去。
+9. **本脚本的边界**：只支持单atlas page；不做蒙版 / 描边 / tint（slot颜色除外）。四种`blend`（normal/additive/multiply/screen）都按预乘形式实现，遇到未知值会在stdout打印警告并按normal处理。
 
 ## 实测数据（本例）
 

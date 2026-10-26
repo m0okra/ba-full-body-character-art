@@ -93,6 +93,44 @@ def rgb_premultiply(rgba):
     return out
 
 
+# spine BlendMode 枚举顺序
+BLEND_NAMES = {0: 'normal', 1: 'additive', 2: 'multiply', 3: 'screen'}
+
+
+def composite(dst, src, mask, blend, tint=(1.0, 1.0, 1.0, 1.0)):
+    """把一个 attachment 叠进预乘 alpha 累加器（就地修改 dst）。
+
+    src 已预乘 alpha。tint 是 slot 颜色（rgba 0..1），BA 靠它的 alpha 调配件强度 ——
+    漏掉它就会把只该淡淡叠 7% 的光晕按 100% 叠上去（金色光环直接变白）。预乘色彩
+    的调色就是逐通道相乘，alpha 另算。
+
+    四种混合都按预乘形式写：
+      normal  dst = s + d*(1-sa)
+      additive dst = s + d            （v0.2+ 的 BA 光环辉光大多是这一支）
+      screen  dst = s + d*(1-s)
+      multiply dst = d*(s + 1-sa)
+    alpha 一律走 over（乘法混合不改 alpha 以外的量）。
+    """
+    ta = float(tint[3])
+    s = src * mask[:, :, None]
+    s[:, :, :3] *= [tint[0] * ta, tint[1] * ta, tint[2] * ta]
+    s[:, :, 3:4] *= ta
+    sa = s[:, :, 3:4] / 255.0
+    d = dst
+    if blend == 1:                                  # additive
+        d += s
+    elif blend == 3:                                # screen
+        d[:, :, :3] += s[:, :, :3] * (1.0 - d[:, :, :3] / 255.0)
+        d[:, :, 3:4] += s[:, :, 3:4] * (1.0 - d[:, :, 3:4] / 255.0)
+    elif blend == 2:                                # multiply
+        d[:, :, :3] *= s[:, :, :3] / 255.0 + (1.0 - sa)
+        d[:, :, 3:4] = s[:, :, 3:4] + d[:, :, 3:4] * (1.0 - sa)
+    else:                                           # normal (over)
+        d[:, :, :3] = s[:, :, :3] + d[:, :, :3] * (1.0 - sa)
+        d[:, :, 3:4] = s[:, :, 3:4] + d[:, :, 3:4] * (1.0 - sa)
+    np.clip(d, 0, 255, out=d)
+
+
 def rasterize_uv(page_pts, pos_pts, tris, size, origin):
     """Rasterise a mesh once: returns (mask, mapx, mapy).
 
@@ -225,9 +263,19 @@ def main():
 
     dst = np.zeros((CH, CW, 4), np.float32)          # 预乘 alpha 累加器
     for att in pose['attachments']:
-        if att.get('blend'):
-            print('  !! %s: blend mode %s != normal，本脚本只做 over 混合'
-                  % (att['name'], att['blend']))
+        blend = int(att.get('blend') or 0)
+        if blend not in BLEND_NAMES:
+            print('  !! %s: 未知 blend mode %r，按 normal 处理' % (att['name'], att['blend']))
+            blend = 0
+        tint = tuple(att.get('slotColor') or (1.0, 1.0, 1.0, 1.0))
+        if tint[3] <= 1e-4:
+            print('  %-11s %-14s slot alpha≈0，跳过' % (att['slot'], att['name']))
+            continue
+        if any(abs(float(c) - 1.0) > 1e-4 for c in tint):
+            note = '  tint rgb %s alpha %.3f' % (
+                '/'.join('%.2f' % float(c) for c in tint[:3]), float(tint[3]))
+        else:
+            note = ''
         world = np.array(att['world'], np.float64).reshape(-1, 2)
         page = np.array(att['page'], np.float64).reshape(-1, 2)
         tris = np.array(att['triangles'], np.int32).reshape(-1, 3)
@@ -252,16 +300,13 @@ def main():
         cut_px, cut_max = alpha_outside_hull(atlas, att.get('region'),
                                             *page_hull(page, tris, att.get('region')))
         print('%-11s %-14s %-6s verts %2d tris %2d  canvas x %.0f..%.0f y %.0f..%.0f  '
-              '图框内三角面外还有 %d px alpha (max %d，邻家sprite/留白，正常)'
+              '图框内三角面外还有 %d px alpha (max %d，邻家sprite/留白，正常)%s%s'
               % (att['slot'], att['name'], att['type'].replace('Attachment', ''),
                  len(world), len(tris), canvas[:, 0].min(), canvas[:, 0].max(),
-                 canvas[:, 1].min(), canvas[:, 1].max(), cut_px, cut_max))
+                 canvas[:, 1].min(), canvas[:, 1].max(), cut_px, cut_max,
+                 '' if blend == 0 else '  blend=' + BLEND_NAMES[blend], note))
 
-        pre = rgb_premultiply(patch)
-        a = pre[:, :, 3] / 255.0 * m
-        dst[y0:y1, x0:x1, :3] = pre[:, :, :3] * m[:, :, None] + \
-            dst[y0:y1, x0:x1, :3] * (1 - a[:, :, None])
-        dst[y0:y1, x0:x1, 3] = pre[:, :, 3] * m + dst[y0:y1, x0:x1, 3] * (1 - a)
+        composite(dst[y0:y1, x0:x1], rgb_premultiply(patch), m, blend, tint)
 
     # 预乘 -> 直通 alpha
     out = np.zeros((CH, CW, 4), np.float32)
