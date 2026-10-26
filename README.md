@@ -110,13 +110,13 @@ saved out/CH0295_Idle_01_mesh_pc.png (1376, 2934)
 
 ## 注意事项
 
-1. **UV必须走`TextureAtlasRegion`那条分支。** spine-core 4.2的`MeshAttachment.updateRegion()`里，只有`region instanceof TextureAtlasRegion`才用`offsetX / originalWidth`把UV展开到**未裁剪的原始图框**（游戏里的mesh UV就是按原图归一化的）；否则走`else`，把UV当成"裁剪矩形内的0..1"。两者差一个缩放加平移。手搓`{u,v,u2,v2}`的region stub字段看着全对，加载会静默掉进`else`，网格贴到错误的像素上 —— 所以必须`new TextureAtlas(text)` + `new AtlasAttachmentLoader(atlas)` + `new SkeletonBinary(loader)`。顺带好处：atlas里`rotate:90/180`也由官方`updateRegion()`处理。
-2. **mesh不是贴轮廓的紧包。**本例身体件只有23个顶点，会把轮廓外的透明区和图框留白一起盖住。所以"三角面外还有大量sprite alpha"是**正常**的。
-3. **同一片像素被多个region共用。**图集里每个表情、其它变体的sprite就落在身体矩形内，靠mesh天然排除，不需要事后清洗。
+1. **UV必须走`TextureAtlasRegion`那条分支**。spine-core 4.2的`MeshAttachment.updateRegion()`里，只有`region instanceof TextureAtlasRegion`才用`offsetX / originalWidth`把UV展开到**未裁剪的原始图框**（游戏里的mesh UV就是按原图归一化的）；否则走`else`，把UV当成裁剪矩形内的0..1。两者差一个缩放加平移。手搓`{u,v,u2,v2}`的region stub字段看着全对，加载会静默掉进`else`，网格贴到错误的像素上 —— 所以必须`new TextureAtlas(text)` + `new AtlasAttachmentLoader(atlas)` + `new SkeletonBinary(loader)`。顺带好处：atlas里`rotate:90/180`也由官方`updateRegion()`处理。
+2. **mesh不是贴轮廓的紧包**。本例身体件只有23个顶点，会把轮廓外的透明区和图框留白一起盖住。所以三角面外还有大量sprite alpha是**正常**的。
+3. **同一片像素被多个region共用**。图集里每个表情、其它变体的sprite就落在身体矩形内，靠mesh天然排除，不需要事后清洗。
 4. **z序 = 骨骼draw order**：光环在最底（被耳朵、头发遮住）→ 下半身 → 上半身 → 脸在最上。
-5. **图集透明像素是黑的。**采样/缩放要走预乘alpha，否则边缘会被透明黑压灰；`build_mesh_pc.py`里已经这么做了。
-6. **`.atlas`的`offsets`只能用于"同一画布内的相对定位"**（上下半身之间的相对位置精确到像素），不能各自独立定位后再拼 —— 会出缝。
-7. **客户端目录只读。**有XIGNCODE，改文件会触发异常客户端。
+5. **图集透明像素是黑的**。采样/缩放要走预乘alpha，否则边缘会被透明黑压灰；`build_mesh_pc.py`里已经这么做了。
+6. **`.atlas`的`offsets`只能用于同一画布内的相对定位**（上下半身之间的相对位置精确到像素），不能各自独立定位后再拼 —— 会出缝。
+7. **客户端目录只读**。有XIGNCODE，改文件会触发异常客户端。
 8. **本脚本的边界**：只支持单atlas page、只做over混合（`blend != normal`会打印警告，例如`chinatsu_spr`的`halo`是additive）、忽略slot颜色着色。做到哪一步都会在stdout里明说。
 
 ## 实测数据（本例）
