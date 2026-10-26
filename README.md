@@ -51,6 +51,7 @@ python tools/extract_portrait.py --char ch0295_spr    # 加 --find 只列 bundle
 ```
 
 - `--char`就是bundle名里的那个代号（`spinecharacters-<代号>-`），**原样精确匹配**：`ch0295_spr` / `airi_spr` / `np0001_spr` / `aris_noweapon_spr`… 不确定代号就`--list-codes`（当前客户端共666个）。
+- **代号 → 角色**：`--list-codes`只给代号、不给角色名。想看某个学生 / 某套换装对应哪个代号，走[ba-student-crafting-favor](https://github.com/m0okra/ba-student-crafting-favor)里那套流程——从[SchaleDB](https://schaledb.com)的`students.min.json`按名字查到条目，取它的`DevName`（`CH0273`这类）和`PathName`（`mari_idol`这类），再回来对bundle名里的`spinecharacters-<代号>-`。
 - 立绘包名形如`assets-_mx-spinecharacters-<代号>-_mxdependency-{textures,textassets,assets,materials}-*.bundle`；剧情NPC只有`-<代号>-_mxprolog-*`（如`chinatsu_spr` / `arona_spr`），一样能导出。
 - 素材统一落在`spine_src/<代号>/`（本例`spine_src/ch0295_spr/`）。
 - 注意不要拿成其他素材，`ch0295_home`是记忆大厅Live2D，`cafe-characteranimation-ch0295`是小人。
